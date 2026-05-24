@@ -41,3 +41,35 @@ def extrair_ano(campo_data: str) -> int:
     except (ValueError, TypeError):
         return 0 # ano inválido == 'sem data'
     
+# top 10 artistas com mais seguidores 
+def top10_artistas_seguidores(musicas: list) -> None:
+    print("\n" + "="*60)
+    print("  OPÇÃO 1 — TOP 10 ARTISTAS COM MAIS SEGUIDORES")
+    print("="*60)
+
+    artistas_seguidores = {} # dicionario: {artists_name: artist_followers}
+
+    for musica in musicas:
+        nome = musica.get('artist_name', '').strip()
+        seguidores_str = musica.get('artist_followers', '0').strip()
+        
+        if not nome or not seguidores_str: # pula linhas com dados faltando
+            continue
+
+        try:
+            seguidores = int(float(seguidores_str))
+        except ValueError:
+            continue # linha com dado corrompido == é ignorada
+        # evita que versoes com menos seguidores sobrescrevam 
+        if nome not in artistas_seguidores or seguidores > artistas_seguidores[nome]:
+            artistas_seguidores[nome] = seguidores
+
+    top10 = sorted(artistas_seguidores.items(), key=lambda par: par[1], reverse=True)[:10]
+
+    print(f"\n  {'Pos':<5} {'Artista':<35} {'Seguidores':>15}")
+    print("  " + "-"*57)
+
+    for posicao, (artista, seguidores) in enumerate(top10, start=1):
+        print(f"  {posicao:<5} {artista:<35} {seguidores:>15,}")
+
+    print()
