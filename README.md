@@ -18,7 +18,7 @@ Análise de dados do Spotify com Python puro — listas, dicionários e conjunto
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/seu-usuario/spotify-data-analysis.git
+git clone https://github.com/leonardorosler/spotify-data-analysis.git
 
 # 2. Instale a dependência
 pip install plotly
