@@ -41,7 +41,7 @@ def extrair_ano(campo_data: str) -> int:
     except (ValueError, TypeError):
         return 0 # ano inválido == 'sem data'
     
-# top 10 artistas com mais seguidores 
+# opção 1: top 10 artistas com mais seguidores (dicionário e lista)
 def top10_artistas_seguidores(musicas: list) -> None:
     print("\n" + "="*60)
     print("  OPÇÃO 1 — TOP 10 ARTISTAS COM MAIS SEGUIDORES")
@@ -73,3 +73,190 @@ def top10_artistas_seguidores(musicas: list) -> None:
         print(f"  {posicao:<5} {artista:<35} {seguidores:>15,}")
 
     print()
+
+# opção 2: top 15 musicas mais longas (lista)
+def top15_musicas_mais_longas(musicas: list) -> None:
+    print("\n" + "="*60)
+    print("  OPÇÃO 2 — TOP 15 MÚSICAS MAIS LONGAS")
+    print("="*60)
+
+    lista_duracoes = [
+        (
+            float(m['track_duration_min']),
+            m.get('track_name', 'Desconhecida').strip(),
+            m.get('artist_name', 'Desconhecido').strip()
+        )
+        for m in musicas
+        if m.get('track_duration_min', '').strip()
+        and _eh_numero(m['track_duration_min'])
+    ]
+
+    lista_duracoes.sort(key=lambda tupla: tupla[0], reverse=True)
+    top15 = lista_duracoes[:15]
+
+    print(f"\n  {'Pos':<5} {'Música':<40} {'Artista':<25} {'Duração':>10}")
+    print("  " + "-"*82)
+
+    for posicao, (duracao, musica, artista) in enumerate(top15, start=1):
+        musica_trunc  = musica[:38]  + '..' if len(musica)  > 38 else musica
+        artista_trunc = artista[:23] + '..' if len(artista) > 23 else artista
+        print(f"  {posicao:<5} {musica_trunc:<40} {artista_trunc:<25} {duracao:>8.2f} min")
+
+    print()
+
+def _eh_numero(valor: str) -> bool:
+    """Função auxiliar: retorna True se a string pode ser convertida em float."""
+    try:
+        float(valor)
+        return True
+    except (ValueError, TypeError):
+        return False
+
+
+# opção 3: comparação: músicas explícitas x não explícitas
+def comparar_popularidade_explicitas(musicas: list) -> None:
+    print("\n" + "="*60)
+    print("  OPÇÃO 3 — POPULARIDADE MÉDIA: EXPLÍCITAS vs NÃO EXPLÍCITAS")
+    print("="*60)
+
+    grupos = {
+        True:  [],
+        False: []
+    }
+
+    for musica in musicas:
+        explicita_str  = musica.get('explicit', '').strip().upper()
+        popularidade_s = musica.get('track_popularity', '').strip()
+
+        if not explicita_str or not popularidade_s:
+            continue
+        if not _eh_numero(popularidade_s):
+            continue
+
+        eh_explicita = (explicita_str == 'TRUE')
+        popularidade = float(popularidade_s)
+        grupos[eh_explicita].append(popularidade)
+
+    media_explicita     = sum(grupos[True])  / len(grupos[True])  if grupos[True]  else 0
+    media_nao_explicita = sum(grupos[False]) / len(grupos[False]) if grupos[False] else 0
+
+    diferenca = abs(media_explicita - media_nao_explicita)
+    vencedor  = "Explícitas" if media_explicita > media_nao_explicita else "Não‑Explícitas"
+
+    print(f"\n  {'Categoria':<25} {'Qtd. Músicas':>15} {'Popularidade Média':>20}")
+    print("  " + "-"*62)
+    print(f"  {'🔴 Explícitas (TRUE)':<25} {len(grupos[True]):>15,} {media_explicita:>19.2f}")
+    print(f"  {'🟢 Não‑Explícitas (FALSE)':<25} {len(grupos[False]):>15,} {media_nao_explicita:>19.2f}")
+    print("  " + "-"*62)
+    print(f"\n  📊 Diferença entre as médias : {diferenca:.2f} pontos")
+    print(f"  🏆 Categoria mais popular    : {vencedor}")
+    print()
+
+# opção 4: cruzamento de genero com conjuntos
+def cruzamento_generos_sets(musicas: list) -> None:
+    print("\n" + "="*60)
+    print("  OPÇÃO 4 — CRUZAMENTO DE GÊNEROS MUSICAIS (SETS)")
+    print("="*60)
+
+    generos_antigos = set()
+    generos_novos   = set()
+
+    for musica in musicas:
+        campo_data   = musica.get('album_release_date', '') or musica.get('release_date', '')
+        campo_genero = musica.get('artist_genres', '')
+
+        ano = extrair_ano(campo_data)
+
+        if ano == 0:
+            continue
+
+        generos_desta_musica = extrair_generos(campo_genero)
+
+        if ano < 2015:
+            generos_antigos |= generos_desta_musica
+        elif ano >= 2024:
+            generos_novos |= generos_desta_musica
+
+    intersecao = generos_antigos & generos_novos
+    sumidos    = generos_antigos - generos_novos
+    novos      = generos_novos   - generos_antigos
+
+    print(f"\n  Total de gêneros únicos antes de 2015 : {len(generos_antigos)}")
+    print(f"  Total de gêneros únicos em 2024+      : {len(generos_novos)}")
+
+    print(f"\n  🔁 INTERSEÇÃO — Gêneros que PERSISTIRAM ({len(intersecao)} gêneros):")
+    _imprimir_em_colunas(sorted(intersecao), colunas=4)
+
+    print(f"\n  ❌ GÊNEROS QUE SUMIRAM (antes‑2015 mas não em 2024+) — {len(sumidos)} gêneros:")
+    _imprimir_em_colunas(sorted(sumidos), colunas=4)
+
+    print(f"\n  ✅ GÊNEROS NOVOS (em 2024+ mas não antes de 2015) — {len(novos)} gêneros:")
+    _imprimir_em_colunas(sorted(novos), colunas=4)
+
+    print()
+
+def _imprimir_em_colunas(lista: list, colunas: int = 4) -> None:
+    """Função auxiliar: imprime uma lista em múltiplas colunas para facilitar leitura."""
+    if not lista:
+        print("    (nenhum resultado encontrado)")
+        return
+
+    # List Comprehension que monta cada linha com 'colunas' itens formatados
+    for i in range(0, len(lista), colunas):
+        linha = lista[i:i + colunas]   # Fatiamento: pega 'colunas' itens por vez
+        # Cada item é justificado à esquerda em 28 caracteres para alinhar colunas
+        print("    " + "".join(f"{item:<28}" for item in linha))
+
+
+# menu interativo
+def exibir_menu() -> None:
+    print("\n" + "╔" + "═"*56 + "╗")
+    print("║" + "   🎵  ANÁLISE DO DATASET SPOTIFY  🎵".center(56) + "║")
+    print("╠" + "═"*56 + "╣")
+    print("║  1. Top 10 Artistas com Mais Seguidores              ║")
+    print("║  2. Top 15 Músicas Mais Longas                       ║")
+    print("║  3. Popularidade Média: Explícitas vs Não‑Explícitas ║")
+    print("║  4. Cruzamento de Gêneros (Sets)                     ║")
+    print("║  5. Gráfico de Barras — Top 10 Mais Populares        ║")
+    print("║  6. Scatter Plot — Popularidade Artista x Música     ║")
+    print("║  0. Sair                                             ║")
+    print("╚" + "═"*56 + "╝")
+    print("  Escolha uma opção: ", end="")
+
+
+def executar_menu(musicas: list) -> None:
+    opcoes = {
+        '1': lambda: top10_artistas_seguidores(musicas),
+        '2': lambda: top15_musicas_mais_longas(musicas),
+        '3': lambda: comparar_popularidade_explicitas(musicas),
+        '4': lambda: cruzamento_generos_sets(musicas),
+        '5': lambda: grafico_barras_top10(musicas),
+        '6': lambda: scatter_popularidade(musicas),
+    }
+
+    while True:
+        exibir_menu()
+        escolha = input().strip()
+
+        if escolha == '0':
+            print("\n  Até logo! 👋\n")
+            break
+        elif escolha in opcoes:
+            opcoes[escolha]()
+            input("  Pressione ENTER para continuar...")
+            os.system('cls')
+        else:
+            print("\n  [!] Opção inválida. Digite um número de 0 a 6.\n")
+
+# ponto de entrada
+if __name__ == "__main__":
+    print("\n" + "="*60)
+    print("  Carregando dados do dataset Spotify...")
+    print("="*60)
+
+    musicas = ler_dados(NOME_ARQUIVO)
+
+    if musicas:
+        executar_menu(musicas)
+    else:
+        print("  Programa encerrado por falta de dados.\n")
