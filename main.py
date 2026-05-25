@@ -207,6 +207,122 @@ def _imprimir_em_colunas(lista: list, colunas: int = 4) -> None:
         # Cada item é justificado à esquerda em 28 caracteres para alinhar colunas
         print("    " + "".join(f"{item:<28}" for item in linha))
 
+# opção 5: grádico de barras: top 10 músicas mais populares
+def grafico_barras_top10(musicas: list) -> None:
+    print("\n" + "="*60)
+    print("  OPÇÃO 5 — GRÁFICO DE BARRAS: TOP 10 MAIS POPULARES")
+    print("="*60)
+
+    dados_validos = [
+        (
+            int(float(m['track_popularity'])),
+            m.get('track_name', 'Desconhecida').strip(),
+            m.get('artist_name', 'Desconhecido').strip()
+        )
+        for m in musicas
+        if m.get('track_popularity', '').strip() and _eh_numero(m.get('track_popularity', ''))
+    ]
+
+    dados_validos.sort(key=lambda t: t[0], reverse=True)
+
+    vistos = set()
+    top10  = []
+    for popularidade, nome, artista in dados_validos:
+        if nome not in vistos:
+            vistos.add(nome)
+            top10.append((popularidade, nome, artista))
+        if len(top10) == 10:
+            break
+
+    popularidades = [t[0] for t in top10]
+    nomes         = [f"{t[1][:30]}\n({t[2][:20]})" for t in top10]
+
+    barra = go.Bar(
+        x=nomes,
+        y=popularidades,
+        marker=dict(
+            color=popularidades,
+            colorscale='Viridis',
+            showscale=True,
+            line=dict(color='white', width=0.5)
+        ),
+        text=popularidades,
+        textposition='outside',
+        hovertemplate='<b>%{x}</b><br>Popularidade: %{y}<extra></extra>'
+    )
+
+    layout = go.Layout(
+        title=dict(text='🎵 Top 10 Músicas Mais Populares no Spotify', font=dict(size=20)),
+        xaxis=dict(title='Música (Artista)', tickangle=-15),
+        yaxis=dict(title='Popularidade', range=[0, 105]),
+        plot_bgcolor='#f9f9f9',
+        paper_bgcolor='#ffffff',
+        showlegend=False
+    )
+
+    figura = go.Figure(data=[barra], layout=layout)
+    figura.show()
+    print("\n  [OK] Gráfico aberto no navegador!\n")
+
+# opção 6: scatter plot: popularidade do artista vs da música
+def scatter_popularidade(musicas: list) -> None:
+    print("\n" + "="*60)
+    print("  OPÇÃO 6 — SCATTER PLOT: POPULARIDADE ARTISTA vs MÚSICA")
+    print("="*60)
+
+    dados = [
+        {
+            'x':        float(m['artist_popularity']),
+            'y':        float(m['track_popularity']),
+            'nome':     m.get('track_name', '?').strip()[:40],
+            'artista':  m.get('artist_name', '?').strip()[:30],
+            'explicit': m.get('explicit', 'FALSE').strip().upper() == 'TRUE'
+        }
+        for m in musicas
+        if m.get('artist_popularity', '').strip() and _eh_numero(m.get('artist_popularity', ''))
+        and m.get('track_popularity',  '').strip() and _eh_numero(m.get('track_popularity',  ''))
+    ]
+
+    explicitas     = [d for d in dados if d['explicit']]
+    nao_explicitas = [d for d in dados if not d['explicit']]
+
+    def criar_trace(grupo, nome_grupo, cor):
+        return go.Scatter(
+            x    = [d['x'] for d in grupo],
+            y    = [d['y'] for d in grupo],
+            mode = 'markers',
+            name = nome_grupo,
+            marker=dict(
+                color=cor,
+                size=6,
+                opacity=0.6,
+                line=dict(width=0.3, color='white')
+            ),
+            hovertemplate=(
+                '<b>%{customdata[0]}</b><br>'
+                'Artista: %{customdata[1]}<br>'
+                'Pop. Artista: %{x}<br>'
+                'Pop. Música: %{y}'
+                '<extra></extra>'
+            ),
+            customdata=[[d['nome'], d['artista']] for d in grupo]
+        )
+
+    trace_nao_explicitas = criar_trace(nao_explicitas, '🟢 Não‑Explícitas', '#1DB954')
+    trace_explicitas     = criar_trace(explicitas,     '🔴 Explícitas',     '#E22134')
+
+    layout = go.Layout(
+        title=dict(text='🎯 Popularidade do Artista vs Popularidade da Música', font=dict(size=20)),
+        xaxis=dict(title='Popularidade do Artista (0–100)', range=[-2, 102]),
+        yaxis=dict(title='Popularidade da Música (0–100)',  range=[-2, 102]),
+        plot_bgcolor='#f0f0f0',
+        paper_bgcolor='#ffffff',
+        legend=dict(x=0.01, y=0.99)
+    )
+
+    figura = go.Figure(data=[trace_nao_explicitas, trace_explicitas], layout=layout)
+    figura.show()
+    print("\n  [OK] Gráfico aberto no navegador!\n")
 
 # menu interativo
 def exibir_menu() -> None:
