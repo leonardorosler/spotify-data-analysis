@@ -31,7 +31,10 @@ def extrair_generos(campo_genero: str) -> set:   # set - conjunto
     limpo = limpo.replace("'", '').replace('"', '') # remove aspas/apóstrofos
 
     # cria uma lista de genero sem espaços
-    lista_generos = [g.strip().lower() for g in limpo.split(',') if g.strip()]
+    lista_generos = []
+    for g in limpo.split(','):
+        if g.strip():
+            lista_generos.append(g.strip().lower())
     return set(lista_generos)
 
 # função auxiliar extração do ano de lançamento
@@ -80,16 +83,15 @@ def top15_musicas_mais_longas(musicas: list) -> None:
     print("  OPÇÃO 2 — TOP 15 MÚSICAS MAIS LONGAS")
     print("="*60)
 
-    lista_duracoes = [
-        (
-            float(m['track_duration_min']),
-            m.get('track_name', 'Desconhecida').strip(),
-            m.get('artist_name', 'Desconhecido').strip()
-        )
-        for m in musicas
-        if m.get('track_duration_min', '').strip()
-        and _eh_numero(m['track_duration_min'])
-    ]
+    lista_duracoes = []
+    for m in musicas:
+        if m.get('track_duration_min', '').strip() and _eh_numero(m['track_duration_min']):
+            tupla = (
+                float(m['track_duration_min']),
+                m.get('track_name', 'Desconhecida').strip(),
+                m.get('artist_name', 'Desconhecido').strip()
+            )
+            lista_duracoes.append(tupla)
 
     lista_duracoes.sort(key=lambda tupla: tupla[0], reverse=True)
     top15 = lista_duracoes[:15]
@@ -213,15 +215,15 @@ def grafico_barras_top10(musicas: list) -> None:
     print("  OPÇÃO 5 — GRÁFICO DE BARRAS: TOP 10 MAIS POPULARES")
     print("="*60)
 
-    dados_validos = [
-        (
-            int(float(m['track_popularity'])),
-            m.get('track_name', 'Desconhecida').strip(),
-            m.get('artist_name', 'Desconhecido').strip()
-        )
-        for m in musicas
-        if m.get('track_popularity', '').strip() and _eh_numero(m.get('track_popularity', ''))
-    ]
+    dados_validos = []
+    for m in musicas:
+        if m.get('track_popularity', '').strip() and _eh_numero(m.get('track_popularity', '')):
+            tupla = (
+                int(float(m['track_popularity'])),
+                m.get('track_name', 'Desconhecida').strip(),
+                m.get('artist_name', 'Desconhecido').strip()
+            )
+            dados_validos.append(tupla)
 
     dados_validos.sort(key=lambda t: t[0], reverse=True)
 
@@ -234,8 +236,12 @@ def grafico_barras_top10(musicas: list) -> None:
         if len(top10) == 10:
             break
 
-    popularidades = [t[0] for t in top10]
-    nomes         = [f"{t[1][:30]}\n({t[2][:20]})" for t in top10]
+    popularidades = []
+    nomes = []
+    for t in top10:
+        popularidades.append(t[0])
+        nomes.append(f"{t[1][:30]}\n({t[2][:20]})")
+
 
     barra = go.Bar(
         x=nomes,
@@ -270,26 +276,41 @@ def scatter_popularidade(musicas: list) -> None:
     print("  OPÇÃO 6 — SCATTER PLOT: POPULARIDADE ARTISTA vs MÚSICA")
     print("="*60)
 
-    dados = [
-        {
-            'x':        float(m['artist_popularity']),
-            'y':        float(m['track_popularity']),
-            'nome':     m.get('track_name', '?').strip()[:40],
-            'artista':  m.get('artist_name', '?').strip()[:30],
-            'explicit': m.get('explicit', 'FALSE').strip().upper() == 'TRUE'
-        }
-        for m in musicas
-        if m.get('artist_popularity', '').strip() and _eh_numero(m.get('artist_popularity', ''))
-        and m.get('track_popularity',  '').strip() and _eh_numero(m.get('track_popularity',  ''))
-    ]
+    dados = []
+    for m in musicas:
+        tem_artist = m.get('artist_popularity', '').strip() and _eh_numero(m.get('artist_popularity', ''))
+        tem_track  = m.get('track_popularity',  '').strip() and _eh_numero(m.get('track_popularity',  ''))
+        if tem_artist and tem_track:
+            dados.append({
+                'x':       float(m['artist_popularity']),
+                'y':       float(m['track_popularity']),
+                'nome':    m.get('track_name', '?').strip()[:40],
+                'artista': m.get('artist_name', '?').strip()[:30],
+                'explicit': m.get('explicit', 'FALSE').strip().upper() == 'TRUE'
+            })
 
-    explicitas     = [d for d in dados if d['explicit']]
-    nao_explicitas = [d for d in dados if not d['explicit']]
+    explicitas     = []
+    nao_explicitas = []
+    for d in dados:
+        if d['explicit']:
+            explicitas.append(d)
+        else:
+            nao_explicitas.append(d)
 
     def criar_trace(grupo, nome_grupo, cor):
+        # monta as listas ANTES
+        x = []
+        y = []
+        customdata = []
+        for d in grupo:
+            x.append(d['x'])
+            y.append(d['y'])
+            customdata.append([d['nome'], d['artista']])
+
+        # passa as listas prontas para o go.Scatter
         return go.Scatter(
-            x    = [d['x'] for d in grupo],
-            y    = [d['y'] for d in grupo],
+            x    = x,
+            y    = y,
             mode = 'markers',
             name = nome_grupo,
             marker=dict(
@@ -305,7 +326,7 @@ def scatter_popularidade(musicas: list) -> None:
                 'Pop. Música: %{y}'
                 '<extra></extra>'
             ),
-            customdata=[[d['nome'], d['artista']] for d in grupo]
+            customdata=customdata
         )
 
     trace_nao_explicitas = criar_trace(nao_explicitas, '🟢 Não‑Explícitas', '#1DB954')
